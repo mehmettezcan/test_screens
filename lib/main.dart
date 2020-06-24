@@ -6,8 +6,8 @@ import 'package:boilerplate/di/modules/netwok_module.dart';
 import 'package:boilerplate/di/modules/preference_module.dart';
 import 'package:boilerplate/routes.dart';
 import 'package:boilerplate/stores/language/language_store.dart';
-import 'package:boilerplate/stores/post/post_store.dart';
 import 'package:boilerplate/stores/theme/theme_store.dart';
+import 'package:boilerplate/stores/user_store/user_store.dart';
 import 'package:boilerplate/ui/splash/splash.dart';
 import 'package:boilerplate/utils/locale/app_localization.dart';
 import 'package:flutter/material.dart';
@@ -43,15 +43,16 @@ class MyApp extends StatelessWidget {
   // Create your store as a final variable in a base Widget. This works better
   // with Hot Reload than creating it directly in the `build` function.
   final ThemeStore _themeStore = ThemeStore(appComponent.getRepository());
-  final PostStore _postStore = PostStore(appComponent.getRepository());
-  final LanguageStore _languageStore = LanguageStore(appComponent.getRepository());
+  final UserStore _userStore = UserStore(appComponent.getRepository());
+  final LanguageStore _languageStore =
+      LanguageStore(appComponent.getRepository());
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         Provider<ThemeStore>.value(value: _themeStore),
-        Provider<PostStore>.value(value: _postStore),
+        Provider<UserStore>.value(value: _userStore),
         Provider<LanguageStore>.value(value: _languageStore),
       ],
       child: Observer(

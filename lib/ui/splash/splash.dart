@@ -21,12 +21,18 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      child: Center(child: AppIconWidget(image: 'assets/icons/ic_appicon.png')),
+      child: Center(
+        child: Hero(
+          tag: 'logo',
+          transitionOnUserGestures: true,
+          child: AppIconWidget(image: 'assets/images/logo.png'),
+        ),
+      ),
     );
   }
 
   startTimer() {
-    var _duration = Duration(milliseconds: 5000);
+    var _duration = Duration(milliseconds: 2000);
     return Timer(_duration, navigate);
   }
 

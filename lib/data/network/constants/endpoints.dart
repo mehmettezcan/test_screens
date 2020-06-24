@@ -12,4 +12,6 @@ class Endpoints {
 
   // booking endpoints
   static const String getPosts = baseUrl + "/posts";
+
+  static const String getUser = "https://dijitalacentem.net/api.json";
 }

@@ -1,14 +1,13 @@
 import 'package:boilerplate/data/sharedpref/constants/preferences.dart';
 import 'package:boilerplate/routes.dart';
 import 'package:boilerplate/stores/language/language_store.dart';
-import 'package:boilerplate/stores/post/post_store.dart';
 import 'package:boilerplate/stores/theme/theme_store.dart';
+import 'package:boilerplate/stores/user_store/user_store.dart';
 import 'package:boilerplate/utils/locale/app_localization.dart';
 import 'package:boilerplate/widgets/progress_indicator_widget.dart';
 import 'package:flushbar/flushbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:material_dialog/material_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,9 +18,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   //stores:---------------------------------------------------------------------
-  PostStore _postStore;
+  UserStore _userStore;
   ThemeStore _themeStore;
   LanguageStore _languageStore;
+  bool isSort = false;
+  List dataUsers;
 
   @override
   void initState() {
@@ -29,33 +30,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  void didChangeDependencies() {
+  void didChangeDependencies() async {
     super.didChangeDependencies();
 
     // initializing stores
     _languageStore = Provider.of<LanguageStore>(context);
     _themeStore = Provider.of<ThemeStore>(context);
-    _postStore = Provider.of<PostStore>(context);
+    _userStore = Provider.of<UserStore>(context);
 
     // check to see if already called api
-    if (!_postStore.loading) {
-      _postStore.getPosts();
+    if (!_userStore.loadingUser) {
+      await _userStore.getUsers();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(),
+      drawer: Drawer(
+        child: Container(
+          child: Text(''),
+        ),
+      ),
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        title: Text('Kullanıcı Listesi'),
+        actions: _buildActions(context),
+      ),
       body: _buildBody(),
-    );
-  }
-
-  // app bar methods:-----------------------------------------------------------
-  Widget _buildAppBar() {
-    return AppBar(
-      title: Text(AppLocalizations.of(context).translate('home_tv_posts')),
-      actions: _buildActions(context),
     );
   }
 
@@ -99,10 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildLanguageButton() {
     return IconButton(
       onPressed: () {
-        _buildLanguageDialog();
+        setState(() {
+          _buildLanguageDialog();
+        });
       },
       icon: Icon(
-        Icons.language,
+        Icons.sort_by_alpha,
       ),
     );
   }
@@ -120,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMainContent() {
     return Observer(
       builder: (context) {
-        return _postStore.loading
+        return _userStore.loadingUser
             ? CustomProgressIndicatorWidget()
             : Material(child: _buildListView());
       },
@@ -128,14 +132,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildListView() {
-    return _postStore.postList != null
+    return _userStore.userModelList != null
         ? ListView.separated(
-            itemCount: _postStore.postList.posts.length,
+            itemCount: _userStore.userModelList.userModelList.length,
             separatorBuilder: (context, position) {
-              return Divider();
+              return _userStore.userModelList.userModelList[position].isActive
+                  ? Divider()
+                  : Container(width: 0, height: 0);
             },
             itemBuilder: (context, position) {
-              return _buildListItem(position);
+              return _userStore.userModelList.userModelList[position].isActive
+                  ? _buildListItem(position)
+                  : Container(width: 0, height: 0);
             },
           )
         : Center(
@@ -148,19 +156,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildListItem(int position) {
     return ListTile(
       dense: true,
-      leading: Icon(Icons.cloud_circle),
+      leading: Image.network(
+          _userStore.userModelList.userModelList[position].picture),
       title: Text(
-        '${_postStore.postList.posts[position].title}',
+        '${_userStore.userModelList.userModelList[position].name}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         softWrap: false,
-        style: Theme.of(context).textTheme.title,
-      ),
-      subtitle: Text(
-        '${_postStore.postList.posts[position].body}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        softWrap: false,
+        style: Theme
+            .of(context)
+            .textTheme
+            .title,
       ),
     );
   }
@@ -168,8 +174,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _handleErrorMessage() {
     return Observer(
       builder: (context) {
-        if (_postStore.errorStore.errorMessage.isNotEmpty) {
-          return _showErrorMessage(_postStore.errorStore.errorMessage);
+        if (_userStore.errorStore.errorMessage.isNotEmpty) {
+          return _showErrorMessage(_userStore.errorStore.errorMessage);
         }
 
         return SizedBox.shrink();
@@ -193,49 +199,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _buildLanguageDialog() {
-    _showDialog<String>(
-      context: context,
-      child: MaterialDialog(
-        borderRadius: 5.0,
-        enableFullWidth: true,
-        title: Text(
-          AppLocalizations.of(context).translate('home_tv_choose_language'),
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.0,
-          ),
-        ),
-        headerColor: Theme.of(context).primaryColor,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        closeButtonColor: Colors.white,
-        enableCloseButton: true,
-        enableBackButton: false,
-        onCloseButtonClicked: () {
-          Navigator.of(context).pop();
-        },
-        children: _languageStore.supportedLanguages
-            .map(
-              (object) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.all(0.0),
-                title: Text(
-                  object.language,
-                  style: TextStyle(
-                    color: _languageStore.locale == object.locale
-                        ? Theme.of(context).primaryColor
-                        : _themeStore.darkMode ? Colors.white : Colors.black,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  // change user language based on selected locale
-                  _languageStore.changeLanguage(object.locale);
-                },
-              ),
-            )
-            .toList(),
-      ),
-    );
+    if (isSort) {
+      _userStore.userModelList.userModelList.sort((a, b) {
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+      isSort = !isSort;
+    } else {
+      _userStore.userModelList.userModelList.sort((a, b) {
+        return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+      });
+      isSort = !isSort;
+    }
   }
 
   _showDialog<T>({BuildContext context, Widget child}) {

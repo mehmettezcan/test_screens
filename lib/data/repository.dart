@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:boilerplate/data/local/datasources/post/post_datasource.dart';
+import 'package:boilerplate/data/network/apis/users_api/user_api.dart';
 import 'package:boilerplate/data/sharedpref/shared_preference_helper.dart';
 import 'package:boilerplate/models/post/post.dart';
-import 'package:boilerplate/models/post/post_list.dart';
+import 'package:boilerplate/models/user_model/user_model_list.dart';
 import 'package:sembast/sembast.dart';
 
 import 'local/constants/db_constants.dart';
@@ -15,30 +16,22 @@ class Repository {
 
   // api objects
   final PostApi _postApi;
+  final UserApi _userApi;
 
   // shared pref object
   final SharedPreferenceHelper _sharedPrefsHelper;
 
   // constructor
-  Repository(this._postApi, this._sharedPrefsHelper, this._postDataSource);
+  Repository(this._postApi, this._sharedPrefsHelper, this._postDataSource,
+      this._userApi);
 
-  // Post: ---------------------------------------------------------------------
-  Future<PostList> getPosts() async {
+  Future<UserModelList> getUsers() async {
     // check to see if posts are present in database, then fetch from database
     // else make a network call to get all posts, store them into database for
     // later use
-    return await _postDataSource.count() > 0
-        ? _postDataSource
-            .getPostsFromDb()
-            .then((postsList) => postsList)
-            .catchError((error) => throw error)
-        : _postApi.getPosts().then((postsList) {
-            postsList.posts.forEach((post) {
-              _postDataSource.insert(post);
-            });
-
-            return postsList;
-          }).catchError((error) => throw error);
+    return await _userApi.getUser().then((user) {
+      return user;
+    }).catchError((error) => throw error);
   }
 
   Future<List<Post>> findPostById(int id) {

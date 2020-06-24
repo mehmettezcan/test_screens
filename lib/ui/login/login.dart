@@ -1,9 +1,10 @@
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:boilerplate/data/sharedpref/constants/preferences.dart';
 import 'package:boilerplate/routes.dart';
 import 'package:boilerplate/stores/form/form_store.dart';
+import 'package:boilerplate/stores/user_store/user_store.dart';
 import 'package:boilerplate/utils/device/device_utils.dart';
 import 'package:boilerplate/utils/locale/app_localization.dart';
-import 'package:boilerplate/widgets/app_icon_widget.dart';
 import 'package:boilerplate/widgets/empty_app_bar_widget.dart';
 import 'package:boilerplate/widgets/progress_indicator_widget.dart';
 import 'package:boilerplate/widgets/rounded_button_widget.dart';
@@ -28,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   //stores:---------------------------------------------------------------------
   ThemeStore _themeStore;
+  UserStore _userStore;
 
   //focus node:-----------------------------------------------------------------
   FocusNode _passwordFocusNode;
@@ -50,6 +52,12 @@ class _LoginScreenState extends State<LoginScreen> {
     super.didChangeDependencies();
 
     _themeStore = Provider.of<ThemeStore>(context);
+    _userStore = Provider.of<UserStore>(context);
+
+    // check to see if already called api
+    if (!_userStore.loadingUser) {
+      _userStore.getUsers();
+    }
   }
 
   @override
@@ -57,28 +65,52 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       primary: true,
       appBar: EmptyAppBar(),
-      body: _buildBody(),
+      body: Stack(
+        children: <Widget>[
+          Container(
+            width: MediaQuery.of(context).size.width * 0.5,
+            color: Colors.blue,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: _buildBody(),
+          ),
+        ],
+      ),
     );
   }
 
   // body methods:--------------------------------------------------------------
   Widget _buildBody() {
-    return Material(
+    return Container(
+      decoration: new BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        boxShadow: [
+          new BoxShadow(
+            color: Colors.grey,
+            blurRadius: 30.0,
+          ),
+        ],
+      ),
       child: Stack(
         children: <Widget>[
-          MediaQuery.of(context).orientation == Orientation.landscape
-            ? Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 1,
-                    child: _buildLeftSide(),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: _buildRightSide(),
-                  ),
-                ],
-          ) : Center(child: _buildRightSide()),
+          MediaQuery
+              .of(context)
+              .orientation == Orientation.landscape
+              ? Row(
+            children: <Widget>[
+              Expanded(
+                flex: 1,
+                child: _buildLeftSide(),
+              ),
+              Expanded(
+                flex: 1,
+                child: _buildRightSide(),
+              ),
+            ],
+          )
+              : Center(child: _buildRightSide()),
           Observer(
             builder: (context) {
               return _store.success
@@ -101,9 +133,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildLeftSide() {
     return SizedBox.expand(
-      child: Image.asset(
-        'assets/images/img_login.jpg',
-        fit: BoxFit.cover,
+      child: Column(
+        children: <Widget>[
+          Hero(
+            tag: 'logo',
+            transitionOnUserGestures: true,
+            child: Container(
+              child: Image.asset('assets/images/logo.png'),
+              height: 120.0,
+            ),
+          ),
+          TyperAnimatedTextKit(
+              speed: Duration(milliseconds: 170),
+              pause: Duration(milliseconds: 1000),
+              isRepeatingAnimation: false,
+              text: [
+                "welcome",
+              ],
+              textStyle: TextStyle(fontSize: 30.0, fontFamily: "Horizon"),
+              textAlign: TextAlign.center,
+              alignment: AlignmentDirectional.topStart // or Alignment.topLeft
+          ),
+        ],
       ),
     );
   }
@@ -113,18 +164,59 @@ class _LoginScreenState extends State<LoginScreen> {
       key: _formKey,
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 30.0),
           child: Column(
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              AppIconWidget(image: 'assets/icons/ic_appicon.png'),
+              Hero(
+                tag: 'logo',
+                transitionOnUserGestures: true,
+                child: Container(
+                  child: Image.asset('assets/images/logo.png'),
+                  height: 120.0,
+                ),
+              ),
+              TyperAnimatedTextKit(
+                  speed: Duration(milliseconds: 300),
+                  pause: Duration(milliseconds: 1000),
+                  isRepeatingAnimation: false,
+                  text: [
+                    "welcome",
+                  ],
+                  textStyle: TextStyle(fontSize: 30.0, fontFamily: "Horizon"),
+                  textAlign: TextAlign.center,
+                  alignment:
+                  AlignmentDirectional.topStart // or Alignment.topLeft
+              ),
+              SizedBox(height: 14.0),
+              Center(
+                  child: Text(
+                    'Sign to continue',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  )),
               SizedBox(height: 24.0),
               _buildUserIdField(),
               _buildPasswordField(),
               _buildForgotPasswordButton(),
-              _buildSignInButton()
+              _buildSignInButton(),
+              Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        'Don\'t have account?',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
+                      FlatButton(
+                        child: Text(
+                          'create a new account',
+                          style: TextStyle(fontSize: 13, color: Colors.blue),
+                        ),
+                      )
+                    ],
+                  )),
             ],
           ),
         ),
@@ -158,7 +250,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Observer(
       builder: (context) {
         return TextFieldWidget(
-          hint: AppLocalizations.of(context).translate('login_et_user_password'),
+          hint:
+          AppLocalizations.of(context).translate('login_et_user_password'),
           isObscure: true,
           padding: EdgeInsets.only(top: 16.0),
           icon: Icons.lock,
@@ -181,27 +274,50 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: EdgeInsets.all(0.0),
         child: Text(
           AppLocalizations.of(context).translate('login_btn_forgot_password'),
-          style: Theme.of(context)
+          style:
+          Theme
+              .of(context)
               .textTheme
               .caption
-              .copyWith(color: Colors.orangeAccent),
+              .copyWith(color: Colors.blue),
         ),
         onPressed: () {},
       ),
     );
   }
 
+  saveSP(String key, dynamic value) async {
+    SharedPreferences sharedPrefs = await SharedPreferences.getInstance();
+    if (value is bool) {
+      sharedPrefs.setBool(key, value);
+    } else if (value is String) {
+      sharedPrefs.setString(key, value);
+    } else if (value is int) {
+      sharedPrefs.setInt(key, value);
+    } else if (value is double) {
+      sharedPrefs.setDouble(key, value);
+    } else if (value is List<String>) {
+      sharedPrefs.setStringList(key, value);
+    }
+  }
+
   Widget _buildSignInButton() {
     return RoundedButtonWidget(
-      buttonText: AppLocalizations.of(context).translate('login_btn_sign_in'),
-      buttonColor: Colors.orangeAccent,
+      buttonText: 'Login',
+      buttonColor: Colors.blue,
       textColor: Colors.white,
       onPressed: () async {
-        if (_store.canLogin) {
+        if (_userStore.userModelList.userModelList
+            .where((element) => element.email == _userEmailController.text)
+            .isNotEmpty) {
+          SharedPreferences preferences = await SharedPreferences.getInstance();
+          preferences.setBool(Preferences.is_logged_in, true);
+          saveSP('username', _userEmailController.text);
+          saveSP('password', _passwordController.text);
           DeviceUtils.hideKeyboard(context);
-          _store.login();
+          Navigator.pushNamed(context, '/home');
         } else {
-          _showErrorMessage('Please fill in all fields');
+          _showErrorMessage('Please fill in an email');
         }
       },
     );
@@ -221,14 +337,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // General Methods:-----------------------------------------------------------
-  _showErrorMessage( String message) {
+  _showErrorMessage(String message) {
     Future.delayed(Duration(milliseconds: 0), () {
       if (message != null && message.isNotEmpty) {
         FlushbarHelper.createError(
           message: message,
           title: AppLocalizations.of(context).translate('home_tv_error'),
           duration: Duration(seconds: 3),
-        )..show(context);
+        )
+          ..show(context);
       }
     });
 
@@ -244,5 +361,4 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordFocusNode.dispose();
     super.dispose();
   }
-
 }
